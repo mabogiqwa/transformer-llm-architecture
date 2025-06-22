@@ -26,3 +26,13 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+class LearnedPositionalEncoding(nn.Module):
+    def __init__(self, max_len, d_model):
+        super().__init__()
+        self.pos_embed = nn.Embedding(max_len, d_model)
+
+    def forward(self, x):
+        B, T, _ = x.shape
+        pos = torch.arange(T, device=x.device).unsqueeze(0).expand(B, T)
+        return x + self.pos_embed(pos)
