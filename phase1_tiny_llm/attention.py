@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from utils import generate_causal_mask
 
 class MultiHeadSelfAttention(nn.Module):
     def __init__(self, d_model, n_heads):
@@ -36,10 +37,12 @@ class MultiHeadSelfAttention(nn.Module):
         #Scaled dot-product attention
         scores = Q @ K.transpose(-2, -1) / (self.head_dim ** 0.5) # (B, n_heads, T, T)
 
-        if mask is not None:
-            scores = scores.masked_fill(mask == 0, float('-inf'))
+        if mask is None:
+            mask = generate_causal_mask(T).to(x.device)
 
-        attn_weights = F.softmax(scores,, dim=-1) # (B, n_heads, T, T)
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+
+        attn_weights = F.softmax(scores, dim=-1) # (B, n_heads, T, T)
         attn_output = attn_weights @ V # (B, n_heads, T, head_dim)
 
         attn_output = attn_output.transpose(1, 2).contiguous().view(B, T, self.d_model)
