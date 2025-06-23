@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from attention import MultiHeadSelfAttention
-from model import FeedForward, TokenPositionalEmbedding
+from embeddings import TokenPositionalEmbedding
 
 class CustomLayerNorm(nn.Module):
     def __init__(self, d_model, eps=1e-5):
@@ -28,16 +28,6 @@ class FeedForward(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class LearnedPositionalEncoding(nn.Module):
-    def __init__(self, max_len, d_model):
-        super().__init__()
-        self.pos_embed = nn.Embedding(max_len, d_model)
-
-    def forward(self, x):
-        B, T, _ = x.shape
-        pos = torch.arange(T, device=x.device).unsqueeze(0).expand(B, T)
-        return x + self.pos_embed(pos)
-
 class TransformerBlock(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -59,5 +49,23 @@ class TinyTransformer(nn.Module):
         self.config = config
 
         self.embedding = TokenPositionalEmbedding(
-            
+            vocab_size = config.vocab_size,
+            d_model = config.d_model,
+            max_len = config.context_length
         )
+
+        self.blocks = nn.ModuleList([
+            TransformerBlock(config) for _ in range(config.n_layers)
+        ])
+
+        self.final_norm = nn.LayerNorm(config.d_model)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size)
+
+    def forward(self, input_ids, mask=None):
+        x = self.embedding(input_ids)
+        for block in self.blocks:
+            x = block(x, mask=mask)
+        x = self.final_norm(x)
+        logits = self.lm_head(x)
+        
+        return logits
