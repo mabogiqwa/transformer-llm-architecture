@@ -1,0 +1,7 @@
+{
+  "timestamp": "20250624_211830",
+  "device": "cuda:0",
+  "model_parameters": 421697,
+  "vocab_size": 65,
+  "dataset_size": 1115393
+}
